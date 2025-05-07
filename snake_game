@@ -1,0 +1,139 @@
+import pygame
+import random
+
+# Настройки экрана
+WIDTH, HEIGHT = 640, 480
+CELL_SIZE = 20
+
+# Цвета
+WHITE = (255, 255, 255)
+GREEN = (0, 255, 0)
+RED = (255, 0, 0)
+BLACK = (0, 0, 0)
+
+# Инициализация Pygame
+pygame.init()
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Изгиб Питона")
+clock = pygame.time.Clock()
+font = pygame.font.SysFont("Arial", 25)
+
+
+class GameObject:
+    """Базовый класс для игровых объектов."""
+
+    def __init__(self, position, color):
+        self.position = position
+        self.color = color
+
+    def draw(self, surface):
+        rect = pygame.Rect(self.position[0], self.position[1], CELL_SIZE, CELL_SIZE)
+        pygame.draw.rect(surface, self.color, rect)
+
+
+class Apple(GameObject):
+    """Класс яблока."""
+
+    def __init__(self, color):
+        position = self.random_position()
+        super().__init__(position, color)
+
+    def random_position(self):
+        x = random.randint(0, (WIDTH - CELL_SIZE) // CELL_SIZE) * CELL_SIZE
+        y = random.randint(0, (HEIGHT - CELL_SIZE) // CELL_SIZE) * CELL_SIZE
+        return x, y
+
+    def relocate(self):
+        self.position = self.random_position()
+
+
+class Snake:
+    """Класс змейки."""
+
+    def __init__(self):
+        self.body = [(CELL_SIZE * 5, CELL_SIZE * 5)]
+        self.color = GREEN
+        self.direction = pygame.K_RIGHT
+        self.length = 1
+
+    def head_position(self):
+        return self.body[0]
+
+    def move(self):
+        x, y = self.head_position()
+        if self.direction == pygame.K_UP:
+            y -= CELL_SIZE
+        elif self.direction == pygame.K_DOWN:
+            y += CELL_SIZE
+        elif self.direction == pygame.K_LEFT:
+            x -= CELL_SIZE
+        elif self.direction == pygame.K_RIGHT:
+            x += CELL_SIZE
+        new_head = (x % WIDTH, y % HEIGHT)
+        self.body.insert(0, new_head)
+        if len(self.body) > self.length:
+            self.body.pop()
+
+    def draw(self, surface):
+        for segment in self.body:
+            pygame.draw.rect(surface, self.color,
+                             (segment[0], segment[1], CELL_SIZE, CELL_SIZE))
+
+    def change_direction(self, direction):
+        opposites = {
+            pygame.K_UP: pygame.K_DOWN,
+            pygame.K_DOWN: pygame.K_UP,
+            pygame.K_LEFT: pygame.K_RIGHT,
+            pygame.K_RIGHT: pygame.K_LEFT,
+        }
+        if direction != opposites.get(self.direction):
+            self.direction = direction
+
+    def check_collision(self):
+        return self.head_position() in self.body[1:]
+
+
+def draw_text(surface, text, position):
+    """Отрисовка текста на экране."""
+    render = font.render(text, True, WHITE)
+    surface.blit(render, position)
+
+
+def main():
+    """Главная функция игры."""
+    snake = Snake()
+    apple = Apple(RED)
+    score = 0
+    running = True
+
+    while running:
+        screen.fill(BLACK)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                snake.change_direction(event.key)
+
+        snake.move()
+
+        if snake.head_position() == apple.position:
+            score += 1
+            snake.length += 1
+            apple.relocate()
+
+        if snake.check_collision():
+            running = False
+
+        snake.draw(screen)
+        apple.draw(screen)
+        draw_text(screen, f"Score: {score}", (10, 10))
+
+        pygame.display.update()
+        clock.tick(10)
+
+    pygame.quit()
+
+
+if __name__ == "__main__":
+    main()
